@@ -2,9 +2,10 @@
 pragma solidity ^0.8.20;
 
 import "fhevm/lib/TFHE.sol";
+import "fhevm/gateway/GatewayCaller.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract ZamaWEERC20 is ERC20 {
+contract ZamaWEERC20 is ERC20, GatewayCaller {
     uint8 public constant encDecimals = 6;
 
     mapping(address => euint64) internal _encBalances;
@@ -22,6 +23,33 @@ contract ZamaWEERC20 is ERC20 {
         euint64 shieldedAmount = TFHE.asEuint64(convertedAmount);
 
         _encBalances[msg.sender] = TFHE.add(_encBalances[msg.sender], shieldedAmount);
+    }
+
+    function unwrap(einput encryptedAmount, bytes calldata inputProof) public {
+        euint64 amount = TFHE.asEuint64(encryptedAmount, inputProof);
+        ebool canUnwrap = TFHE.le(amount, _encBalances[msg.sender]);
+        euint64 canUnwrapAmount = TFHE.select(canUnwrap, amount, TFHE.asEuint64(0));
+
+        eaddress to = TFHE.asEaddress(msg.sender);
+
+        uint256[] memory cts = new uint256[](2);
+        cts[0] = Gateway.toUint256(to);
+        cts[1] = Gateway.toUint256(canUnwrapAmount);
+        Gateway.requestDecryption(cts, this.callbackUnwrap.selector, 0, block.timestamp + 10000, false);
+    }
+
+    function callbackUnwrap(uint256, address to, uint64 amount) public onlyGateway returns (bool) {
+        euint64 encAmount = TFHE.asEuint64(amount);
+
+        ebool canUnwrap = TFHE.le(encAmount, _encBalances[to]);
+        euint64 canUnwrapAmount = TFHE.select(canUnwrap, encAmount, TFHE.asEuint64(0));
+
+        _encBalances[to] = TFHE.sub(_encBalances[to], canUnwrapAmount);
+        TFHE.allow(_encBalances[to], address(this));
+        TFHE.allow(_encBalances[to], to);
+        _mint(to, _convertDecimalForUnwrap(amount));
+
+        return true;
     }
 
     // Converts the amount for deposit.
