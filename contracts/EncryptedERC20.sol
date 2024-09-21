@@ -52,6 +52,27 @@ contract ZamaWEERC20 is ERC20, GatewayCaller {
         return true;
     }
 
+    function transferEncrypted(address to, einput encryptedAmount, bytes calldata inputProof) public {
+        euint64 amount = TFHE.asEuint64(encryptedAmount, inputProof);
+        require(TFHE.isSenderAllowed(amount));
+
+        ebool canTransfer = TFHE.le(amount, _encBalances[msg.sender]);
+        euint64 canTransferAmount = TFHE.select(canTransfer, amount, TFHE.asEuint64(0));
+
+        _transferEncrypted(msg.sender, to, canTransferAmount, canTransfer);
+    }
+
+    function _transferEncrypted(address from, address to, euint64 amount, ebool isTransferable) internal {
+        euint64 transferValue = TFHE.select(isTransferable, amount, TFHE.asEuint64(0));
+        euint64 newBalanceTo = TFHE.add(_encBalances[to], transferValue);
+        _encBalances[to] = newBalanceTo;
+        TFHE.allow(newBalanceTo, address(this));
+        TFHE.allow(newBalanceTo, to);
+        euint64 newBalanceFrom = TFHE.sub(_encBalances[from], transferValue);
+        _encBalances[from] = newBalanceFrom;
+        TFHE.allow(newBalanceFrom, address(this));
+        TFHE.allow(newBalanceFrom, from);
+    }
     // Converts the amount for deposit.
     function _convertDecimalForWrap(uint256 amount) internal view returns (uint64) {
         return uint64(amount / 10 ** (decimals() - encDecimals));
