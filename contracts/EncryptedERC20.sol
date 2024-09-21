@@ -9,9 +9,14 @@ contract ZamaWEERC20 is ERC20, GatewayCaller {
     uint8 public constant encDecimals = 6;
 
     mapping(address => euint64) internal _encBalances;
+    mapping(address => mapping(address => euint64)) internal _allowances;
 
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
         _mint(msg.sender, 100 * 10 ** uint(decimals()));
+    }
+
+    function getAllowance(address owner, address spender) public view returns (euint64) {
+        return _allowances[owner][spender];
     }
 
     function wrap(uint256 amount) public {
@@ -52,6 +57,17 @@ contract ZamaWEERC20 is ERC20, GatewayCaller {
         return true;
     }
 
+    function approveEncrypted(
+        address spender,
+        einput encryptedAmount,
+        bytes calldata inputProof
+    ) public returns (bool) {
+        euint64 amount = TFHE.asEuint64(encryptedAmount, inputProof);
+
+        _allowances[msg.sender][spender] = amount;
+        return true;
+    }
+
     function transferEncrypted(address to, einput encryptedAmount, bytes calldata inputProof) public {
         euint64 amount = TFHE.asEuint64(encryptedAmount, inputProof);
         require(TFHE.isSenderAllowed(amount));
@@ -60,6 +76,27 @@ contract ZamaWEERC20 is ERC20, GatewayCaller {
         euint64 canTransferAmount = TFHE.select(canTransfer, amount, TFHE.asEuint64(0));
 
         _transferEncrypted(msg.sender, to, canTransferAmount, canTransfer);
+    }
+
+    function transferFromEncrypted(address from, address to, einput encryptedAmount, bytes calldata inputProof) public {
+        euint64 amount = TFHE.asEuint64(encryptedAmount, inputProof);
+        require(TFHE.isSenderAllowed(amount));
+
+        ebool canTransfer = TFHE.le(amount, _encBalances[from]);
+        euint64 canTransferAmount = TFHE.select(canTransfer, amount, TFHE.asEuint64(0));
+
+        ebool isTransferable = _updateAllowance(from, msg.sender, canTransferAmount);
+
+        _transferEncrypted(from, to, canTransferAmount, isTransferable);
+    }
+
+    function _updateAllowance(address owner, address spender, euint64 amount) internal returns (ebool) {
+        euint64 currentAllowance = _allowances[owner][spender];
+        ebool allowedTransfer = TFHE.le(amount, currentAllowance);
+        ebool canTransfer = TFHE.le(amount, _encBalances[owner]);
+        ebool isTransferable = TFHE.and(canTransfer, allowedTransfer);
+        _allowances[owner][spender] = TFHE.select(isTransferable, TFHE.sub(currentAllowance, amount), currentAllowance);
+        return isTransferable;
     }
 
     function _transferEncrypted(address from, address to, euint64 amount, ebool isTransferable) internal {
