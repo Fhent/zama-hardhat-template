@@ -28,7 +28,13 @@ async function BridgeContractCall(key: number, cfunc: string, cargs: any[] = [],
     args[0] = encryptedInput.handles[0];
     args[1] = encryptedInput.handles[1];
     args[2] = encryptedInput.inputProof;
-    args[3] = "0x9C3Ad2B5f00EC8e8564244EBa59692Dd5e57695b";
+    args[3] = "0xf1fC048a35b5E98eb435BF72dc98542622DF91ff";
+  } else if (cfunc === "onRecvIntent") {
+    const input = instance.createEncryptedInput(contractAddress, wallet.address);
+    input.add64(args[1]);
+    const encryptedInput = input.encrypt();
+    args[1] = encryptedInput.handles[0];
+    args[2] = encryptedInput.inputProof;
   }
 
   const contract = new ethers.Contract(contractAddress, abi, wallet);
@@ -49,11 +55,18 @@ async function main() {
     case "nextIntentId":
       await BridgeContractCall(Number(wallet), param1);
       break;
-
+    case "intents":
+      await BridgeContractCall(Number(wallet), param1, [BigInt(Number(param2))]);
+      break;
     case "bridgeWEERC20":
       await BridgeContractCall(Number(wallet), param1, [param2, BigInt(Number(param3) * 10 ** 6)]);
       break;
-
+    case "onRecvIntent":
+      await BridgeContractCall(Number(wallet), param1, [param2, BigInt(Number(param3) * 10 ** 6)]);
+      break;
+    case "testEmit":
+      await BridgeContractCall(Number(wallet), param1);
+      break;
     default:
       console.log("Invalid parameter");
       console.log("Your param: ", param1);
