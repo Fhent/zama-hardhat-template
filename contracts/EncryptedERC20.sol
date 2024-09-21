@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract ZamaWEERC20 is ERC20, GatewayCaller {
     uint8 public constant encDecimals = 6;
+    address public constant gateway = 0xc8c9303Cd7F337fab769686B593B87DC3403E0ce;
 
     mapping(address => euint64) internal _encBalances;
     mapping(address => mapping(address => euint64)) internal _allowances;
@@ -28,6 +29,9 @@ contract ZamaWEERC20 is ERC20, GatewayCaller {
         euint64 shieldedAmount = TFHE.asEuint64(convertedAmount);
 
         _encBalances[msg.sender] = TFHE.add(_encBalances[msg.sender], shieldedAmount);
+        TFHE.allow(_encBalances[msg.sender], address(this));
+        TFHE.allow(_encBalances[msg.sender], msg.sender);
+        TFHE.allow(_encBalances[msg.sender], gateway);
     }
 
     function unwrap(einput encryptedAmount, bytes calldata inputProof) public {
@@ -65,7 +69,19 @@ contract ZamaWEERC20 is ERC20, GatewayCaller {
         euint64 amount = TFHE.asEuint64(encryptedAmount, inputProof);
 
         _allowances[msg.sender][spender] = amount;
+        TFHE.allow(_allowances[msg.sender][spender], address(this));
+        TFHE.allow(_allowances[msg.sender][spender], msg.sender);
+        TFHE.allow(_allowances[msg.sender][spender], spender);
+
         return true;
+    }
+
+    function allowBalance(address allowed) public {
+        TFHE.allow(_encBalances[msg.sender], allowed);
+    }
+
+    function allowAllowance(address spender, address allowed) public {
+        TFHE.allow(_allowances[msg.sender][spender], allowed);
     }
 
     function transferEncrypted(address to, einput encryptedAmount, bytes calldata inputProof) public {
@@ -96,6 +112,10 @@ contract ZamaWEERC20 is ERC20, GatewayCaller {
         ebool canTransfer = TFHE.le(amount, _encBalances[owner]);
         ebool isTransferable = TFHE.and(canTransfer, allowedTransfer);
         _allowances[owner][spender] = TFHE.select(isTransferable, TFHE.sub(currentAllowance, amount), currentAllowance);
+        TFHE.allow(_allowances[owner][spender], address(this));
+        TFHE.allow(_allowances[owner][spender], owner);
+        TFHE.allow(_allowances[owner][spender], spender);
+
         return isTransferable;
     }
 
