@@ -15,6 +15,9 @@ contract ZamaWEERC20 is ERC20, GatewayCaller {
     constructor(string memory name, string memory symbol) ERC20(name, symbol) {
         _mint(msg.sender, 100 * 10 ** uint(decimals()));
     }
+    function getEncryptedBalance(address account) public view returns (euint64) {
+        return _encBalances[account];
+    }
 
     function getAllowance(address owner, address spender) public view returns (euint64) {
         return _allowances[owner][spender];

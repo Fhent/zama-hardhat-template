@@ -30,12 +30,24 @@ async function ContractCall(key: number, cfunc: string, cargs: any[] = [], cvalu
     const encryptedInput = input.encrypt();
     args[0] = encryptedInput.handles[0];
     args[1] = encryptedInput.inputProof;
+  } else if (cfunc === "approveEncrypted") {
+    const input = instance.createEncryptedInput(contractAddress, wallet.address);
+    input.add64(args[1]);
+    const encryptedInput = input.encrypt();
+    args[1] = encryptedInput.handles[0];
+    args[2] = encryptedInput.inputProof;
   } else if (cfunc === "transferEncrypted") {
     const input = instance.createEncryptedInput(contractAddress, wallet.address);
     input.add64(args[1]);
     const encryptedInput = input.encrypt();
     args[1] = encryptedInput.handles[0];
     args[2] = encryptedInput.inputProof;
+  } else if (cfunc === "transferFromEncrypted") {
+    const input = instance.createEncryptedInput(contractAddress, wallet.address);
+    input.add64(args[2]);
+    const encryptedInput = input.encrypt();
+    args[2] = encryptedInput.handles[0];
+    args[3] = encryptedInput.inputProof;
   }
 
   const contract = new ethers.Contract(contractAddress, abi, wallet);
@@ -59,6 +71,9 @@ async function main() {
     case "balanceOf":
       await ContractCall(Number(wallet), param1, [param2]);
       break;
+    case "getEncryptedBalance":
+      await ContractCall(Number(wallet), param1, [param2]);
+      break;
     case "getAllowance":
       await ContractCall(Number(wallet), "getAllowance", [param2, param3]);
       break;
@@ -70,8 +85,24 @@ async function main() {
       await ContractCall(Number(wallet), param1, [BigInt(Number(param2) * 10 ** 6)]);
       break;
     }
+    case "approveEncrypted": {
+      await ContractCall(Number(wallet), param1, [param2, BigInt(Number(param3) * 10 ** 6)]);
+      break;
+    }
+    case "allowBalance": {
+      await ContractCall(Number(wallet), param1, [param2]);
+      break;
+    }
+    case "allowAllowance": {
+      await ContractCall(Number(wallet), param1, [param2, param3]);
+      break;
+    }
     case "transferEncrypted": {
       await ContractCall(Number(wallet), param1, [param2, BigInt(Number(param3) * 10 ** 6)]);
+      break;
+    }
+    case "transferFromEncrypted": {
+      await ContractCall(Number(wallet), param1, [param2, param3, BigInt(Number(param4) * 10 ** 6)]);
       break;
     }
     default:
