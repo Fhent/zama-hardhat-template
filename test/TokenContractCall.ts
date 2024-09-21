@@ -12,7 +12,7 @@ const wallets: { [key: string]: string } = {
   1: process.env.PRIVATE_KEY_DEPLOYER as string,
 };
 
-async function ContractCall(key: number, cfunc: string, cargs: any[] = [], cvalue: string = "0") {
+async function TokenContractCall(key: number, cfunc: string, cargs: any[] = [], cvalue: string = "0") {
   const args = cargs;
   const wallet = new ethers.Wallet(wallets[key], new ethers.JsonRpcProvider("https://devnet.zama.ai"));
   const instance = await createFhevmInstance({
@@ -66,43 +66,43 @@ async function main() {
   const param4 = process.argv[6];
   switch (param1) {
     case "totalSupply":
-      await ContractCall(Number(wallet), param1);
+      await TokenContractCall(Number(wallet), param1);
       break;
     case "balanceOf":
-      await ContractCall(Number(wallet), param1, [param2]);
+      await TokenContractCall(Number(wallet), param1, [param2]);
       break;
     case "getEncryptedBalance":
-      await ContractCall(Number(wallet), param1, [param2]);
+      await TokenContractCall(Number(wallet), param1, [param2]);
       break;
     case "getAllowance":
-      await ContractCall(Number(wallet), "getAllowance", [param2, param3]);
+      await TokenContractCall(Number(wallet), "getAllowance", [param2, param3]);
       break;
     case "wrap": {
-      await ContractCall(Number(wallet), param1, [BigInt(Number(param2) * 10 ** 18)]);
+      await TokenContractCall(Number(wallet), param1, [BigInt(Number(param2) * 10 ** 18)]);
       break;
     }
     case "unwrap": {
-      await ContractCall(Number(wallet), param1, [BigInt(Number(param2) * 10 ** 6)]);
+      await TokenContractCall(Number(wallet), param1, [BigInt(Number(param2) * 10 ** 6)]);
       break;
     }
     case "approveEncrypted": {
-      await ContractCall(Number(wallet), param1, [param2, BigInt(Number(param3) * 10 ** 6)]);
+      await TokenContractCall(Number(wallet), param1, [param2, BigInt(Number(param3) * 10 ** 6)]);
       break;
     }
     case "allowBalance": {
-      await ContractCall(Number(wallet), param1, [param2]);
+      await TokenContractCall(Number(wallet), param1, [param2]);
       break;
     }
     case "allowAllowance": {
-      await ContractCall(Number(wallet), param1, [param2, param3]);
+      await TokenContractCall(Number(wallet), param1, [param2, param3]);
       break;
     }
     case "transferEncrypted": {
-      await ContractCall(Number(wallet), param1, [param2, BigInt(Number(param3) * 10 ** 6)]);
+      await TokenContractCall(Number(wallet), param1, [param2, BigInt(Number(param3) * 10 ** 6)]);
       break;
     }
     case "transferFromEncrypted": {
-      await ContractCall(Number(wallet), param1, [param2, param3, BigInt(Number(param4) * 10 ** 6)]);
+      await TokenContractCall(Number(wallet), param1, [param2, param3, BigInt(Number(param4) * 10 ** 6)]);
       break;
     }
     default:
