@@ -22,6 +22,7 @@ contract ZamaBridge {
     uint64 public nextIntentId = 0;
 
     event Packet(eaddress to, euint64 amount, address relayer);
+    event TestPacket(uint256 num);
 
     constructor(address _tokenAddress) {
         weerc20 = IZamaWEERC20(_tokenAddress);
@@ -42,5 +43,9 @@ contract ZamaBridge {
         TFHE.allow(amount, _relayerAddress);
 
         emit Packet(to, amount, _relayerAddress);
+    }
+
+    function testEmit() public {
+        emit TestPacket(123);
     }
 }
